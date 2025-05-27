@@ -4,41 +4,45 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smriti Yatra</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             box-sizing: border-box;
         }
         html, body { 
-            height: 100%; 
+            min-height: 100vh; /* Changed from height: 100% */
             margin: 0; 
             font-family: Arial, sans-serif; 
             line-height: 1.6;
+            display: flex;
+            flex-direction: column;
         }
         #splash-screen {
-            height: 100vh;
-            width: 100vw;
+            /* height: 100vh; */ /* Removed, will fill main-content */
+            /* width: 100vw; */ /* Removed, will fill main-content */
+            width: 100%;
+            flex-grow: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            position: relative; /* For positioning "Powered by NAS" if needed */
+            /* position: relative; */ /* No longer needed if not positioning .powered-by */
         }
         .app-name {
             font-size: 3em;
             margin-bottom: 20px;
         }
-        .powered-by {
-            font-size: 1em;
-            /* Positioned at the bottom by flex layout due to main content taking space */
-        }
+        /* .powered-by class is no longer used in splash */
         #auth-screen {
             display: none; /* Initially hidden, shown by JS */
+            width: 100%;
+            flex-grow: 1;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
+            /* min-height: 100vh; */ /* Removed */
             padding: 20px;
             background-color: #f0f2f5;
         }
@@ -93,9 +97,12 @@
         }
         #timeline-screen { 
             display: none; /* Initially hidden */
+            width: 100%;
+            flex-grow: 1; /* Allow it to take space if other screens are hidden */
             padding: 20px;
             background-color: #e9ebee;
-            /* display: block; by default for a div, so this is fine */
+            /* display: block; is fine for this screen, it will scroll internally if needed */
+            overflow-y: auto; /* Ensure timeline content can scroll if it exceeds screen height */
         }
         #timeline-screen h1 {
             text-align: center;
@@ -239,16 +246,74 @@
                 font-size: 1.5em;
             }
         }
+
+        /* Navbar Styling */
+        #navbar { 
+            background-color: #4A5568; 
+            color: white; 
+            padding: 10px 15px; 
+            display: none; /* Initially hidden, JS handles visibility */
+            flex-direction: row; /* Ensure icons are in a row */
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        #navbar span { 
+            margin: 0 5px; /* Adjusted for potential crowding with space-between */
+            cursor: pointer; 
+            font-size: 1.1em;
+        }
+        #logout-icon { /* Already handled by JS for display: none/inline */
+            /* additional specific styles if needed */
+        }
+
+        /* Main Content Area Styling */
+        #main-content { 
+            flex-grow: 1; 
+            display: flex; /* Allows active screen to fill it */
+            flex-direction: column; /* Ensures screens stack if multiple were somehow visible */
+            /* height: 100% was here, but flex-grow on body's child should be enough */
+        }
+        
+        /* Footer Styling */
+        #app-footer { 
+            background-color: #4A5568; 
+            color: white; 
+            padding: 15px; 
+            text-align: center; 
+            display: none; /* Initially hidden, JS handles visibility */
+        }
+        #app-footer p {
+            margin: 0;
+            font-size: 0.9em;
+        }
+
+        /* Responsive Considerations for Navbar */
+        @media (max-width: 480px) {
+            #navbar {
+                padding: 10px 10px; /* Slightly reduce padding */
+                justify-content: space-around; /* Better for fewer items on small screens */
+            }
+            #navbar span {
+                font-size: 1em; /* Adjust font size for smaller screens */
+                margin: 0 3px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div id="splash-screen">
-        <div class="app-name">Smriti Yatra</div>
-        <div class="powered-by">Powered by NAS</div>
-    </div>
-    <div id="auth-screen">
-        <div id="login-form-container">
-            <h2>Login</h2>
+    <nav id="navbar">
+        <span id="back-icon">[B]</span>
+        <span id="home-icon">[H]</span>
+        <span id="profile-icon">[P]</span>
+        <span id="logout-icon" style="display: none;">[Logout]</span>
+    </nav>
+    <main id="main-content">
+        <div id="splash-screen">
+            <div class="app-name">Smriti Yatra</div>
+        </div>
+        <div id="auth-screen">
+            <div id="login-form-container">
+                <h2>Login</h2>
             <form id="login-form">
                 <input type="email" placeholder="Email" required>
                 <input type="password" placeholder="Password" required>
@@ -297,18 +362,28 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
+    <footer id="app-footer">
+        <p>Powered by NAS</p>
+    </footer>
     <script>
-        // Splash screen logic
-        function showAuthScreen() {
-            document.getElementById('splash-screen').style.display = 'none';
-            document.getElementById('auth-screen').style.display = 'flex'; 
-            document.getElementById('login-form-container').style.display = 'block'; 
-            document.getElementById('signup-form-container').style.display = 'none'; 
-        }
-        setTimeout(showAuthScreen, 2000);
+        // Supabase Initialization
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL_PLACEHOLDER'; // To be replaced by the user
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_PLACEHOLDER'; // To be replaced by the user
 
-        // Auth form toggle logic
+        let supabase = null;
+        try {
+            supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log('Supabase client initialized.');
+            if (SUPABASE_URL === 'YOUR_SUPABASE_URL_PLACEHOLDER') {
+                console.warn('Supabase is using placeholder URL. Please replace with your actual Supabase URL and Key.');
+            }
+        } catch (error) {
+            console.error('Error initializing Supabase client:', error);
+        }
+
+        // DOM Element Declarations
+        const splashScreen = document.getElementById('splash-screen');
         const loginFormContainer = document.getElementById('login-form-container');
         const signupFormContainer = document.getElementById('signup-form-container');
         const showSignupLink = document.getElementById('show-signup-link');
@@ -317,7 +392,81 @@
         const signupForm = document.getElementById('signup-form');
         const authScreen = document.getElementById('auth-screen');
         const timelineScreen = document.getElementById('timeline-screen');
+        const navbar = document.getElementById('navbar');
+        const appFooter = document.getElementById('app-footer');
+        const logoutIcon = document.getElementById('logout-icon');
+        const signupButton = signupForm.querySelector('button[type="submit"]'); 
+        const loginButton = loginForm.querySelector('button[type="submit"]');
 
+        // Refined showAuthScreen function
+        function showAuthScreen() { 
+            splashScreen.style.display = 'none';
+            authScreen.style.display = 'flex'; 
+            loginFormContainer.style.display = 'block';
+            signupFormContainer.style.display = 'none';
+            
+            timelineScreen.style.display = 'none';
+            navbar.style.display = 'none';
+            appFooter.style.display = 'block'; // Footer visible on Auth screen
+            logoutIcon.style.display = 'none';
+        }
+
+        // Initial Load Logic (Session Check)
+        async function checkUserSessionAndSetupUI() {
+            if (!supabase) {
+                console.warn('Supabase client not ready for initial session check.');
+                splashScreen.style.display = 'flex'; 
+                authScreen.style.display = 'none';
+                timelineScreen.style.display = 'none';
+                navbar.style.display = 'none';
+                appFooter.style.display = 'none'; 
+                logoutIcon.style.display = 'none';
+                setTimeout(showAuthScreen, 2000); 
+                return;
+            }
+
+            const { data: { session }, error } = await supabase.auth.getSession();
+
+            if (error) {
+                console.error('Error getting session:', error.message);
+                localStorage.removeItem('smritiYatraUserId'); 
+                splashScreen.style.display = 'flex';
+                authScreen.style.display = 'none';
+                timelineScreen.style.display = 'none';
+                navbar.style.display = 'none';
+                appFooter.style.display = 'none'; 
+                logoutIcon.style.display = 'none';
+                setTimeout(showAuthScreen, 2000);
+                return;
+            }
+
+            if (session && session.user) {
+                console.log('Active session found. User:', session.user.id);
+                localStorage.setItem('smritiYatraUserId', session.user.id); 
+
+                splashScreen.style.display = 'none';
+                authScreen.style.display = 'none';
+                timelineScreen.style.display = 'block'; 
+                navbar.style.display = 'flex';
+                appFooter.style.display = 'block'; 
+                logoutIcon.style.display = 'inline'; 
+            } else {
+                console.log('No active session found.');
+                localStorage.removeItem('smritiYatraUserId'); 
+                splashScreen.style.display = 'flex';
+                authScreen.style.display = 'none';
+                timelineScreen.style.display = 'none';
+                navbar.style.display = 'none';
+                appFooter.style.display = 'none'; 
+                logoutIcon.style.display = 'none';
+                setTimeout(showAuthScreen, 2000); 
+            }
+        }
+
+        // Call this function when the script loads
+        checkUserSessionAndSetupUI();
+
+        // Auth form toggle logic
         showSignupLink.addEventListener('click', function(event) {
             event.preventDefault();
             loginFormContainer.style.display = 'none';
@@ -330,33 +479,152 @@
             loginFormContainer.style.display = 'block';
         });
 
-        loginForm.addEventListener('submit', function(event) {
+        loginForm.addEventListener('submit', async function(event) { // Made function async
             event.preventDefault(); 
             const emailInput = loginForm.querySelector('input[type="email"]');
             const passwordInput = loginForm.querySelector('input[type="password"]');
 
-            if (emailInput.value.trim() !== '' && passwordInput.value.trim() !== '') {
-                authScreen.style.display = 'none';
-                timelineScreen.style.display = 'block'; 
-            } else {
-                alert('Please fill in all fields.');
+            const userEmail = emailInput.value.trim();
+            const userPassword = passwordInput.value.trim();
+
+            if (!userEmail || !userPassword) {
+                alert('Please fill in all login fields.');
+                return;
+            }
+
+            // Ensure supabase client is available
+            if (!supabase) {
+                alert('Supabase client is not initialized. Please check console.');
+                return; 
+            }
+            
+            loginButton.disabled = true;
+            loginButton.textContent = 'Logging in...';
+
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: userEmail,
+                    password: userPassword,
+                });
+
+                if (error) {
+                    console.error('Supabase login error:', error.message);
+                    alert(`Login failed: ${error.message}`);
+                } else if (data && data.user && data.session) {
+                    console.log('Supabase login successful:', data);
+                    localStorage.setItem('smritiYatraUserId', data.user.id);
+                    
+                    authScreen.style.display = 'none';
+                    timelineScreen.style.display = 'block'; 
+                    navbar.style.display = 'flex'; // Show navbar, assuming flex for centering items
+                    appFooter.style.display = 'block'; // Show footer
+                    logoutIcon.style.display = 'inline'; // Show logout icon
+                    
+                    loginForm.reset(); 
+                } else {
+                    console.error('Supabase login issue: No user or session data returned.');
+                    alert('Login failed: Unexpected issue. Please try again.');
+                }
+            } catch (err) {
+                console.error('Unexpected error during login:', err);
+                alert('An unexpected error occurred during login. Please try again.');
+            } finally {
+                loginButton.disabled = false;
+                loginButton.textContent = 'Login';
             }
         });
 
-        signupForm.addEventListener('submit', function(event) {
+        signupForm.addEventListener('submit', async function(event) { 
             event.preventDefault(); 
-            // Basic validation for signup form (optional, browser does required)
+            
             const nameInput = signupForm.querySelector('input[type="text"]');
             const emailInput = signupForm.querySelector('input[type="email"]');
             const passwordInput = signupForm.querySelector('input[type="password"]');
 
-            if (nameInput.value.trim() !== '' && emailInput.value.trim() !== '' && passwordInput.value.trim() !== '') {
-                alert('Signup successful! Please login to continue.');
-                // Switch to login form
-                signupFormContainer.style.display = 'none';
-                loginFormContainer.style.display = 'block';
-            } else {
+            const userName = nameInput.value.trim();
+            const userEmail = emailInput.value.trim();
+            const userPassword = passwordInput.value.trim();
+
+            if (!userName || !userEmail || !userPassword) {
                 alert('Please fill in all signup fields.');
+                return;
+            }
+
+            // Ensure supabase client is available
+            if (!supabase) {
+                alert('Supabase client is not initialized. Please check console.');
+                return; 
+            }
+            
+            // Disable button to prevent multiple submissions
+            signupButton.disabled = true; 
+            signupButton.textContent = 'Signing up...';
+
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email: userEmail,
+                    password: userPassword,
+                    options: {
+                        data: { 
+                            full_name: userName 
+                        }
+                    }
+                });
+
+                if (error) {
+                    console.error('Supabase signup error:', error.message);
+                    alert(`Signup failed: ${error.message}`);
+                } else {
+                    console.log('Supabase signup successful:', data);
+                    alert('Signup successful! Please check your email for verification and then login.'); 
+                    signupFormContainer.style.display = 'none';
+                    loginFormContainer.style.display = 'block';
+                    signupForm.reset(); 
+                }
+            } catch (err) {
+                console.error('Unexpected error during signup:', err);
+                alert('An unexpected error occurred during signup. Please try again.');
+            } finally {
+                signupButton.disabled = false;
+                signupButton.textContent = 'Sign Up';
+            }
+        });
+
+        logoutIcon.addEventListener('click', async function(event) {
+            event.preventDefault();
+
+            if (!supabase) {
+                alert('Supabase client is not initialized. Please check console.');
+                return;
+            }
+
+            // Optional: Add a confirmation dialog (currently commented out as per instruction)
+            // if (!confirm('Are you sure you want to logout?')) {
+            //     return;
+            // }
+
+            try {
+                const { error } = await supabase.auth.signOut();
+
+                if (error) {
+                    console.error('Supabase logout error:', error.message);
+                    alert(`Logout failed: ${error.message}`);
+                } else {
+                    console.log('Supabase logout successful.');
+                    localStorage.removeItem('smritiYatraUserId');
+                    
+                    timelineScreen.style.display = 'none';
+                    navbar.style.display = 'none';
+                    appFooter.style.display = 'none';
+                    logoutIcon.style.display = 'none';
+                    
+                    authScreen.style.display = 'flex'; 
+                    loginFormContainer.style.display = 'block'; 
+                    signupFormContainer.style.display = 'none'; 
+                }
+            } catch (err) {
+                console.error('Unexpected error during logout:', err);
+                alert('An unexpected error occurred during logout. Please try again.');
             }
         });
     </script>
