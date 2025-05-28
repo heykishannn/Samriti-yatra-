@@ -5,311 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smriti Yatra</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-        html, body { 
-            min-height: 100vh; /* Changed from height: 100% */
-            margin: 0; 
-            font-family: Arial, sans-serif; 
-            line-height: 1.6;
-            display: flex;
-            flex-direction: column;
-        }
-        #splash-screen {
-            /* height: 100vh; */ /* Removed, will fill main-content */
-            /* width: 100vw; */ /* Removed, will fill main-content */
-            width: 100%;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            /* position: relative; */ /* No longer needed if not positioning .powered-by */
-        }
-        .app-name {
-            font-size: 3em;
-            margin-bottom: 20px;
-        }
-        /* .powered-by class is no longer used in splash */
-        #auth-screen {
-            display: none; /* Initially hidden, shown by JS */
-            width: 100%;
-            flex-grow: 1;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            /* min-height: 100vh; */ /* Removed */
-            padding: 20px;
-            background-color: #f0f2f5;
-        }
-        #login-form-container, #signup-form-container {
-            background: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            max-width: 400px;
-            width: 100%;
-        }
-        #signup-form-container {
-            display: none; /* Initially hidden */
-        }
-        #auth-screen h2 {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #333;
-        }
-        #auth-screen input[type="text"],
-        #auth-screen input[type="email"],
-        #auth-screen input[type="password"] {
-            width: calc(100% - 22px); /* 100% - padding*2 - border*2 */
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        #auth-screen button[type="submit"] {
-            width: 100%;
-            padding: 10px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        #auth-screen button[type="submit"]:hover {
-            background-color: #0056b3;
-        }
-        #auth-screen p {
-            text-align: center;
-            margin-top: 20px;
-        }
-        #auth-screen a {
-            color: #007bff;
-            text-decoration: none;
-        }
-        #auth-screen a:hover {
-            text-decoration: underline;
-        }
-        #timeline-screen { 
-            display: none; /* Initially hidden */
-            width: 100%;
-            flex-grow: 1; /* Allow it to take space if other screens are hidden */
-            padding: 20px;
-            background-color: #e9ebee;
-            /* display: block; is fine for this screen, it will scroll internally if needed */
-            overflow-y: auto; /* Ensure timeline content can scroll if it exceeds screen height */
-        }
-        #timeline-screen h1 {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #333;
-        }
-        #timeline-container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        .smriti-card {
-            background: #fff;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            display: flex;
-            overflow: hidden; 
-        }
-        .card-thumbnail {
-            width: 100px;
-            min-width: 100px;
-            min-height: 100px;
-            background-color: #ccc;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #777;
-            font-size: 0.8em;
-            text-align: center;
-        }
-        .card-content {
-            padding: 15px;
-            flex-grow: 1;
-        }
-        .card-date {
-            font-size: 0.8em;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        .card-caption {
-            font-size: 1.1em;
-            margin-bottom: 10px;
-            color: #333;
-        }
-        .card-tag {
-            padding: 3px 8px;
-            font-size: 0.75em;
-            border-radius: 12px;
-            display: inline-block; /* Ensures padding and background are applied correctly */
-        }
-        .story-available {
-            background-color: #d1eaff;
-            color: #007bff;
-        }
-        .smriti-lens-enhanced {
-            background-color: #d4edda;
-            color: #155724;
-        }
-
-        /* Media Queries for Responsiveness */
-        @media (max-width: 768px) {
-            .app-name {
-                font-size: 2.8em;
-            }
-            #login-form-container, #signup-form-container {
-                padding: 25px;
-            }
-            .smriti-card {
-                /* Potentially adjust card layout slightly for tablets if needed, but 600px max-width on container is good */
-            }
-        }
-
-        @media (max-width: 480px) {
-            .app-name {
-                font-size: 2.2em;
-            }
-            #auth-screen {
-                padding: 15px; /* Reduce padding for the auth screen itself */
-            }
-            #login-form-container, #signup-form-container {
-                padding: 20px; /* Reduce padding inside form containers */
-                max-width: 100%; /* Allow forms to take full width if needed, respecting auth-screen padding */
-            }
-            #auth-screen h2 {
-                font-size: 1.5em;
-            }
-            #auth-screen input[type="text"],
-            #auth-screen input[type="email"],
-            #auth-screen input[type="password"] {
-                padding: 12px; /* Slightly increase padding for easier touch */
-                font-size: 1em;
-            }
-            #auth-screen button[type="submit"] {
-                padding: 12px;
-                font-size: 1em;
-            }
-
-            #timeline-screen h1 {
-                font-size: 1.8em;
-            }
-            .smriti-card {
-                flex-direction: column;
-            }
-            .card-thumbnail {
-                width: 100%;
-                height: 150px; /* Adjust as needed, could be auto if content defines height */
-                min-height: 150px; /* Ensure a minimum height */
-                background-size: cover; /* Useful if thumbnail is a background image */
-                background-position: center;
-            }
-            .card-thumbnail img {
-                height: 150px; /* Fixed height for consistency */
-                object-fit: cover; /* Ensure image covers the area well */
-            }
-            .card-content {
-                padding: 10px;
-            }
-            .card-caption {
-                font-size: 1em;
-            }
-            .card-date {
-                font-size: 0.75em;
-            }
-            .card-tag {
-                font-size: 0.7em;
-                padding: 2px 6px;
-            }
-        }
-
-        @media (max-width: 320px) {
-            .app-name {
-                font-size: 2em;
-            }
-            #login-form-container, #signup-form-container {
-                padding: 15px;
-            }
-            #auth-screen h2 {
-                font-size: 1.3em;
-            }
-             #timeline-screen h1 {
-                font-size: 1.5em;
-            }
-        }
-
-        /* Navbar Styling */
-        #navbar { 
-            background-color: #4A5568; 
-            color: white; 
-            padding: 10px 15px; 
-            display: none; /* Initially hidden, JS handles visibility */
-            flex-direction: row; /* Ensure icons are in a row */
-            justify-content: space-between; 
-            align-items: center; 
-        }
-        #navbar span { 
-            margin: 0 5px; /* Adjusted for potential crowding with space-between */
-            cursor: pointer; 
-            font-size: 1.1em;
-        }
-        #logout-icon { /* Already handled by JS for display: none/inline */
-            /* additional specific styles if needed */
-        }
-
-        /* Main Content Area Styling */
-        #main-content { 
-            flex-grow: 1; 
-            display: flex; /* Allows active screen to fill it */
-            flex-direction: column; /* Ensures screens stack if multiple were somehow visible */
-            /* height: 100% was here, but flex-grow on body's child should be enough */
-        }
-        
-        /* Footer Styling */
-        #app-footer { 
-            background-color: #4A5568; 
-            color: white; 
-            padding: 15px; 
-            text-align: center; 
-            display: none; /* Initially hidden, JS handles visibility */
-        }
-        #app-footer p {
-            margin: 0;
-            font-size: 0.9em;
-        }
-
-        /* Responsive Considerations for Navbar */
-        @media (max-width: 480px) {
-            #navbar {
-                padding: 10px 10px; /* Slightly reduce padding */
-                justify-content: space-around; /* Better for fewer items on small screens */
-            }
-            #navbar span {
-                font-size: 1em; /* Adjust font size for smaller screens */
-                margin: 0 3px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <nav id="navbar">
-        <span id="back-icon">[B]</span>
-        <span id="home-icon">[H]</span>
-        <span id="profile-icon">[P]</span>
+        <span id="back-icon" style="display: none;">[B]</span>
+        <span id="home-icon">Home</span>
+        <span id="profile-icon">Profile</span>
         <span id="logout-icon" style="display: none;">[Logout]</span>
     </nav>
     <main id="main-content">
         <div id="splash-screen">
             <div class="app-name">Smriti Yatra</div>
+            <div class="powered-by-splash">Powered by NAS</div>
         </div>
         <div id="auth-screen">
             <div id="login-form-container">
@@ -368,8 +76,8 @@
     </footer>
     <script>
         // Supabase Initialization
-        const SUPABASE_URL = 'YOUR_SUPABASE_URL_PLACEHOLDER'; // To be replaced by the user
-        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_PLACEHOLDER'; // To be replaced by the user
+const SUPABASE_URL = 'https://iekkmqrjujuukndcljjv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla2ttcXJqdWp1dWtuZGNsamprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTk5MDUxODIsImV4cCI6MjAzNTQ4MTE4Mn0.mNqH33H_zxtia3zD42EK3U9W0Hh206L7iXN03V_X_Hw';
 
         let supabase = null;
         try {
@@ -397,6 +105,26 @@
         const logoutIcon = document.getElementById('logout-icon');
         const signupButton = signupForm.querySelector('button[type="submit"]'); 
         const loginButton = loginForm.querySelector('button[type="submit"]');
+        const homeIcon = document.getElementById('home-icon');
+
+        // Home Icon Event Listener
+        if (homeIcon) { // Check if element exists
+            homeIcon.addEventListener('click', function(event) {
+                event.preventDefault();
+                // Ensure user is logged in (check localStorage or a global variable if you have one)
+                const userId = localStorage.getItem('smritiYatraUserId');
+                if (userId) {
+                    authScreen.style.display = 'none';
+                    timelineScreen.style.display = 'block'; // Or 'flex' if it uses flex display
+                    navbar.style.display = 'flex'; // Ensure navbar stays visible
+                    appFooter.style.display = 'block'; // Ensure footer stays visible
+                    // Any other screen cleanups if necessary
+                } else {
+                    // If somehow clicked when not logged in, redirect to auth
+                    showAuthScreen(); // Or your function that shows the login page
+                }
+            });
+        }
 
         // Refined showAuthScreen function
         function showAuthScreen() { 
