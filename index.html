@@ -1,360 +1,449 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smriti Yatra</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=360, initial-scale=1.0"/>
+  <title>🔥 CodeLab - Android Preview</title>
+  <style>
+    body { margin: 0; background: #0a0f1c; font-family: system-ui,sans-serif; color: white; text-align: center; min-height: 100vh;}
+    header { background: linear-gradient(to right, #00f2ff, #00ff88); font-size: 1rem; font-weight: bold; padding: 8px 0;}
+    .tab { display: inline-block; padding: 10px 20px; background: #1a1a2e; color: white; border-radius: 5px; margin: 5px 5px 10px; cursor: pointer; border: 1px solid #444;}
+    .tab.active { background: #00f2ff; color: black; font-weight: bold;}
+    .editor { display: none; width: 90%; height: 130px; margin: auto; background: #111; color: white; border: 2px solid #00f2ff; border-radius: 10px; padding: 10px; font-size: 1rem; resize: vertical; outline: none; font-family: 'Courier New', monospace;}
+    #htmlEditor { display: block; }
+    .upload-section { margin: 18px auto 0 auto; font-size: 0.95rem; width: 90%; max-width: 400px; background: #181c2c; border-radius: 10px; padding: 10px 10px 8px 10px;}
+    .upload-section label { display: block; margin-bottom: 6px; font-weight: bold; color: #00f2ff;}
+    input[type="file"] { background: #222; color: white; border: 1px solid #555; border-radius: 5px; padding: 5px; margin-bottom: 6px;}
+    #toggleMediaListBtn { background:#00f2ff; color:#222; border:none; border-radius:5px; padding:2px 10px; cursor:pointer; font-size: 1.1rem; margin-left: 5px; margin-bottom: 4px;}
+    #toggleMediaListBtn:hover { background: #00c3ff; }
+    #mediaListContainer { max-height: 110px; overflow-y: auto; display: none; margin-top: 5px; background: #1a1a2e; border-radius: 6px; padding: 5px; text-align: left;}
+    .media-item { background: #222a3a; border-radius: 6px; margin-bottom: 5px; padding: 5px 5px; display: flex; align-items: center; justify-content: space-between; font-size: 0.97rem;}
+    .media-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 5px;}
+    .media-item button { background: #00f2ff; border: none; border-radius: 5px; color: #222; font-size: 0.9rem; cursor: pointer; padding: 2px 7px; margin-left: 5px;}
+    .media-item .remove-btn { background: #ff4444; color: #fff; }
+    .media-item .remove-btn:hover { background: #ff0000; }
+    .buttons { margin: 15px 0 0 0;}
+    .buttons button { padding: 10px 20px; margin: 5px; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer; transition: 0.3s ease;}
+    .buttons .run { background: linear-gradient(to right, #00ff88, #00f2ff); color: black;}
+    /* Android phone shape preview */
+    .android-frame {
+      width: 360px; height: 700px; margin: 28px auto 0 auto;
+      background: #181c2c;
+      border-radius: 42px;
+      box-shadow: 0 0 25px #00f2ff33, 0 8px 32px #000a;
+      position: relative;
+      padding: 0;
+      border: 4px solid #222e;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column;
+    }
+    .android-notch {
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 120px; height: 24px; background: #222; border-radius: 0 0 18px 18px;
+      z-index: 10;
+      margin-top: -2px;
+    }
+    .android-speaker {
+      position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+      width: 38px; height: 6px; background: #444; border-radius: 3px;
+      z-index: 11;
+    }
+    .android-bottom-bar {
+      position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+      width: 60px; height: 7px; background: #444; border-radius: 4px;
+      z-index: 11;
+    }
+    .android-preview-inner {
+      width: 328px; height: 620px; background: #0e1520; border-radius: 32px;
+      margin-top: 32px; margin-bottom: 24px;
+      overflow: hidden; position: relative; box-shadow: 0 0 15px #00f2ff22;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .android-preview-inner iframe {
+      width: 100%; height: 100%; border: none; background: white;
+      border-radius: 28px;
+      display: block;
+    }
+    .fullscreen-btn {
+      margin: 14px auto 0 auto;
+      background: #00f2ff;
+      color: #222;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      padding: 8px 30px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px #00f2ff22;
+      transition: background 0.2s;
+      display: block;
+    }
+    .fullscreen-btn:hover { background: #00c3ff; }
+    /* Fullscreen overlay */
+    #fullscreenOverlay {
+      display: none;
+      position: fixed;
+      z-index: 99999;
+      left: 0; top: 0; width: 100vw; height: 100vh;
+      background: #0a0f1c;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    #fullscreenContent {
+      width: 100vw; height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .android-frame.fullscreen {
+      width: 98vw; height: 96vh; max-width: 520px; max-height: 98vh;
+      min-width: 280px; min-height: 400px;
+      margin: 0 auto;
+      border-width: 6px;
+    }
+    .android-frame.fullscreen .android-preview-inner {
+      width: 93%; height: 88%; min-width: 220px; min-height: 300px;
+      margin-top: 40px; margin-bottom: 32px;
+    }
+    #fullscreenBackBtn {
+      margin-top: 16px;
+      background: #00f2ff;
+      color: #222;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      padding: 8px 26px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px #00f2ff22;
+      position: absolute;
+      top: 22px; left: 28px;
+      z-index: 20;
+    }
+    #fullscreenBackBtn:hover { background: #00c3ff; }
+    .convert-btn-main { margin: 18px auto 0 auto; display: block; background: linear-gradient(to right, #ffaa00, #ffbb00); color: #222; border: none; border-radius: 8px; font-size: 1.1rem; padding: 12px 30px; font-weight: bold; cursor: pointer;}
+    /* Popup styles */
+    .popup-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999;}
+    .popup-content { background: #1a1a2e; color: #fff; border-radius: 12px; padding: 22px 18px 18px 18px; width: 92%; max-width: 370px; box-shadow: 0 3px 18px #00f2ff33;}
+    .popup-content label { font-weight: bold; color: #00f2ff; margin-top: 8px; display: block;}
+    .popup-content input[type="text"], .popup-content input[type="file"] { width: 100%; padding: 8px; margin: 7px 0 14px 0; border-radius: 6px; border: 1px solid #444; background: #222; color: white; font-size: 1rem;}
+    .popup-buttons { text-align: center; margin-top: 10px;}
+    .popup-buttons button, .popup-buttons a { padding: 10px 18px; margin: 0 8px; border-radius: 8px; font-size: 1rem; cursor: pointer; border: none; display: inline-block;}
+    .popup-buttons .convert-btn { background: linear-gradient(to right, #00ff88, #00f2ff); color: black;}
+    .popup-buttons .cancel-btn { background: #6c757d; color: white;}
+    .popup-status { text-align: center; margin-top: 12px; font-size: 1.05rem; font-weight: bold; color: #00f2ff;}
+    .progress-bar-container { width: 100%; background-color: #333; border-radius: 5px; margin-top: 10px; overflow: hidden;}
+    .progress-bar { width: 0%; height: 18px; background-color: #00f2ff; border-radius: 5px; text-align: center; line-height: 18px; color: black; font-weight: bold; transition: width 0.5s;}
+  </style>
 </head>
 <body>
-    <nav id="navbar">
-        <span id="back-icon" style="display: none;">[B]</span>
-        <span id="home-icon">Home</span>
-        <span id="profile-icon">Profile</span>
-        <span id="logout-icon" style="display: none;">[Logout]</span>
-    </nav>
-    <main id="main-content">
-        <div id="splash-screen">
-            <div class="app-name">Smriti Yatra</div>
-            <div class="powered-by-splash">Powered by NAS</div>
-        </div>
-        <div id="auth-screen">
-            <div id="login-form-container">
-                <h2>Login</h2>
-            <form id="login-form">
-                <input type="email" placeholder="Email" required>
-                <input type="password" placeholder="Password" required>
-                <button type="submit">Login</button>
-            </form>
-            <p>Don't have an account? <a href="#" id="show-signup-link">Sign Up</a></p>
-        </div>
-        <div id="signup-form-container">
-            <h2>Sign Up</h2>
-            <form id="signup-form">
-                <input type="text" placeholder="Name" required>
-                <input type="email" placeholder="Email" required>
-                <input type="password" placeholder="Password" required>
-                <button type="submit">Sign Up</button>
-            </form>
-            <p>Already have an account? <a href="#" id="show-login-link">Login</a></p>
-        </div>
+  <header>🔥 CodeLab - Android Preview</header>
+  <div>
+    <span class="tab active" id="tab-html">HTML</span>
+    <span class="tab" id="tab-css">CSS</span>
+    <span class="tab" id="tab-js">JS</span>
+  </div>
+  <textarea id="htmlEditor" class="editor" placeholder="Write HTML here..."></textarea>
+  <textarea id="cssEditor" class="editor" placeholder="Write CSS here..."></textarea>
+  <textarea id="jsEditor" class="editor" placeholder="Write JS here..."></textarea>
+  <div class="upload-section">
+    <label for="mediaUploader">Upload Files (images, audio, video):</label>
+    <input type="file" id="mediaUploader" multiple accept="image/*,audio/*,video/*,.mp3,.wav,.ogg,.mp4,.webm" />
+    <button id="toggleMediaListBtn">^</button>
+    <div id="mediaListContainer"></div>
+  </div>
+  <div class="buttons">
+    <button class="run" id="runBtn">▶ Run</button>
+  </div>
+  <!-- Android phone shaped preview -->
+  <div class="android-frame" id="androidFrame">
+    <div class="android-notch"></div>
+    <div class="android-speaker"></div>
+    <div class="android-preview-inner" id="preview"></div>
+    <div class="android-bottom-bar"></div>
+  </div>
+  <button class="fullscreen-btn" id="fullscreenBtn">Full Screen Preview</button>
+  <button class="convert-btn-main" id="convertBtn">Convert APK/ZIP</button>
+
+  <!-- Fullscreen overlay -->
+  <div id="fullscreenOverlay">
+    <div id="fullscreenContent">
+      <div class="android-frame fullscreen">
+        <button id="fullscreenBackBtn">← Back</button>
+        <div class="android-notch"></div>
+        <div class="android-speaker"></div>
+        <div class="android-preview-inner" id="fullscreenPreview"></div>
+        <div class="android-bottom-bar"></div>
+      </div>
     </div>
-    <div id="timeline-screen">
-        <h1>My Smriti Timeline</h1>
-        <div id="timeline-container">
-            <div class="smriti-card">
-                <div class="card-thumbnail">Thumbnail</div>
-                <div class="card-content">
-                    <p class="card-date">Oct 26, 2023</p>
-                    <h3 class="card-caption">Beautiful sunset at the beach.</h3>
-                    <span class="card-tag story-available">Story Available</span>
-                </div>
-            </div>
-            <div class="smriti-card">
-                <div class="card-thumbnail">Thumbnail</div>
-                <div class="card-content">
-                    <p class="card-date">Nov 15, 2023</p>
-                    <h3 class="card-caption">Family gathering for Diwali.</h3>
-                    <span class="card-tag smriti-lens-enhanced">Smriti Lens Enhanced</span>
-                </div>
-            </div>
-            <div class="smriti-card">
-                <div class="card-thumbnail">
-                    <img src="https://via.placeholder.com/100/80" alt="placeholder image" style="width:100%; height:auto; display:block;">
-                </div>
-                <div class="card-content">
-                    <p class="card-date">Dec 01, 2023</p>
-                    <h3 class="card-caption">Winter trip to the mountains.</h3>
-                    <span class="card-tag story-available">Story Available</span>
-                </div>
-            </div>
-        </div>
-    </main>
-    <footer id="app-footer">
-        <p>Powered by NAS</p>
-    </footer>
-    <script>
-        // Supabase Initialization
-const SUPABASE_URL = 'https://iekkmqrjujuukndcljjv.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla2ttcXJqdWp1dWtuZGNsamprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTk5MDUxODIsImV4cCI6MjAzNTQ4MTE4Mn0.mNqH33H_zxtia3zD42EK3U9W0Hh206L7iXN03V_X_Hw';
+  </div>
 
-        let supabase = null;
-        try {
-            supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            console.log('Supabase client initialized.');
-            if (SUPABASE_URL === 'YOUR_SUPABASE_URL_PLACEHOLDER') {
-                console.warn('Supabase is using placeholder URL. Please replace with your actual Supabase URL and Key.');
-            }
-        } catch (error) {
-            console.error('Error initializing Supabase client:', error);
-        }
+  <!-- Popup for APK/ZIP conversion -->
+  <div class="popup-overlay" id="convertPopup" style="display:none;">
+    <div class="popup-content">
+      <h2 style="text-align:center;color:#00f2ff;margin-top:0;">Convert to APK or ZIP</h2>
+      <label for="appNameInput">App Name:</label>
+      <input type="text" id="appNameInput" placeholder="My Awesome App">
+      <label for="appPackageInput">App Package Name (e.g., com.example.myapp):</label>
+      <input type="text" id="appPackageInput" placeholder="com.codelab.myproject">
+      <label for="appIconInput">App Icon (.png, .jpg):</label>
+      <input type="file" id="appIconInput" accept="image/*">
+      <div class="popup-buttons">
+        <button class="convert-btn" id="toApkBtn">Convert to APK</button>
+        <button class="convert-btn" id="toZipBtn">Convert to ZIP</button>
+        <button class="cancel-btn" id="closePopupBtn">Cancel</button>
+      </div>
+      <div class="popup-status" id="convertStatus"></div>
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="convertProgress"></div>
+      </div>
+      <div class="popup-buttons" id="downloadBtns" style="display:none;">
+        <a class="convert-btn" id="downloadLink" href="#" download>Download</a>
+      </div>
+    </div>
+  </div>
 
-        // DOM Element Declarations
-        const splashScreen = document.getElementById('splash-screen');
-        const loginFormContainer = document.getElementById('login-form-container');
-        const signupFormContainer = document.getElementById('signup-form-container');
-        const showSignupLink = document.getElementById('show-signup-link');
-        const showLoginLink = document.getElementById('show-login-link');
-        const loginForm = document.getElementById('login-form');
-        const signupForm = document.getElementById('signup-form');
-        const authScreen = document.getElementById('auth-screen');
-        const timelineScreen = document.getElementById('timeline-screen');
-        const navbar = document.getElementById('navbar');
-        const appFooter = document.getElementById('app-footer');
-        const logoutIcon = document.getElementById('logout-icon');
-        const signupButton = signupForm.querySelector('button[type="submit"]'); 
-        const loginButton = loginForm.querySelector('button[type="submit"]');
-        const homeIcon = document.getElementById('home-icon');
-
-        // Home Icon Event Listener
-        if (homeIcon) { // Check if element exists
-            homeIcon.addEventListener('click', function(event) {
-                event.preventDefault();
-                // Ensure user is logged in (check localStorage or a global variable if you have one)
-                const userId = localStorage.getItem('smritiYatraUserId');
-                if (userId) {
-                    authScreen.style.display = 'none';
-                    timelineScreen.style.display = 'block'; // Or 'flex' if it uses flex display
-                    navbar.style.display = 'flex'; // Ensure navbar stays visible
-                    appFooter.style.display = 'block'; // Ensure footer stays visible
-                    // Any other screen cleanups if necessary
-                } else {
-                    // If somehow clicked when not logged in, redirect to auth
-                    showAuthScreen(); // Or your function that shows the login page
-                }
-            });
-        }
-
-        // Refined showAuthScreen function
-        function showAuthScreen() { 
-            splashScreen.style.display = 'none';
-            authScreen.style.display = 'flex'; 
-            loginFormContainer.style.display = 'block';
-            signupFormContainer.style.display = 'none';
-            
-            timelineScreen.style.display = 'none';
-            navbar.style.display = 'none';
-            appFooter.style.display = 'block'; // Footer visible on Auth screen
-            logoutIcon.style.display = 'none';
-        }
-
-        // Initial Load Logic (Session Check)
-        async function checkUserSessionAndSetupUI() {
-            if (!supabase) {
-                console.warn('Supabase client not ready for initial session check.');
-                splashScreen.style.display = 'flex'; 
-                authScreen.style.display = 'none';
-                timelineScreen.style.display = 'none';
-                navbar.style.display = 'none';
-                appFooter.style.display = 'none'; 
-                logoutIcon.style.display = 'none';
-                setTimeout(showAuthScreen, 2000); 
-                return;
-            }
-
-            const { data: { session }, error } = await supabase.auth.getSession();
-
-            if (error) {
-                console.error('Error getting session:', error.message);
-                localStorage.removeItem('smritiYatraUserId'); 
-                splashScreen.style.display = 'flex';
-                authScreen.style.display = 'none';
-                timelineScreen.style.display = 'none';
-                navbar.style.display = 'none';
-                appFooter.style.display = 'none'; 
-                logoutIcon.style.display = 'none';
-                setTimeout(showAuthScreen, 2000);
-                return;
-            }
-
-            if (session && session.user) {
-                console.log('Active session found. User:', session.user.id);
-                localStorage.setItem('smritiYatraUserId', session.user.id); 
-
-                splashScreen.style.display = 'none';
-                authScreen.style.display = 'none';
-                timelineScreen.style.display = 'block'; 
-                navbar.style.display = 'flex';
-                appFooter.style.display = 'block'; 
-                logoutIcon.style.display = 'inline'; 
-            } else {
-                console.log('No active session found.');
-                localStorage.removeItem('smritiYatraUserId'); 
-                splashScreen.style.display = 'flex';
-                authScreen.style.display = 'none';
-                timelineScreen.style.display = 'none';
-                navbar.style.display = 'none';
-                appFooter.style.display = 'none'; 
-                logoutIcon.style.display = 'none';
-                setTimeout(showAuthScreen, 2000); 
-            }
-        }
-
-        // Call this function when the script loads
-        checkUserSessionAndSetupUI();
-
-        // Auth form toggle logic
-        showSignupLink.addEventListener('click', function(event) {
-            event.preventDefault();
-            loginFormContainer.style.display = 'none';
-            signupFormContainer.style.display = 'block';
+  <script>
+    // Tabs & Editors
+    const tabs = [
+      {id: 'tab-html', editor: 'htmlEditor'},
+      {id: 'tab-css', editor: 'cssEditor'},
+      {id: 'tab-js', editor: 'jsEditor'},
+    ];
+    tabs.forEach(tab => {
+      document.getElementById(tab.id).addEventListener('click', () => {
+        tabs.forEach(t => {
+          document.getElementById(t.id).classList.remove('active');
+          document.getElementById(t.editor).style.display = 'none';
         });
+        document.getElementById(tab.id).classList.add('active');
+        document.getElementById(tab.editor).style.display = 'block';
+      });
+    });
 
-        showLoginLink.addEventListener('click', function(event) {
-            event.preventDefault();
-            signupFormContainer.style.display = 'none';
-            loginFormContainer.style.display = 'block';
+    // LocalStorage: Save/Load code
+    const editors = {
+      html: document.getElementById('htmlEditor'),
+      css: document.getElementById('cssEditor'),
+      js: document.getElementById('jsEditor')
+    };
+    function saveAll() {
+      localStorage.setItem('htmlCode', editors.html.value);
+      localStorage.setItem('cssCode', editors.css.value);
+      localStorage.setItem('jsCode', editors.js.value);
+      localStorage.setItem('mediaFiles', JSON.stringify(mediaFiles));
+    }
+    function loadAll() {
+      editors.html.value = localStorage.getItem('htmlCode') || '';
+      editors.css.value = localStorage.getItem('cssCode') || '';
+      editors.js.value = localStorage.getItem('jsCode') || '';
+      mediaFiles = JSON.parse(localStorage.getItem('mediaFiles') || '[]') || [];
+    }
+    editors.html.addEventListener('input', () => { saveAll(); });
+    editors.css.addEventListener('input', () => { saveAll(); });
+    editors.js.addEventListener('input', () => { saveAll(); });
+
+    // Media System
+    const mediaUploader = document.getElementById('mediaUploader');
+    const mediaListContainer = document.getElementById('mediaListContainer');
+    const toggleMediaListBtn = document.getElementById('toggleMediaListBtn');
+    let mediaFiles = [];
+
+    function refreshMediaList() {
+      mediaListContainer.innerHTML = '';
+      if (!mediaFiles.length) {
+        mediaListContainer.innerHTML = "<div style='color:#aaa;font-size:0.95rem;'>No media uploaded</div>";
+      }
+      mediaFiles.forEach((file, idx) => {
+        const div = document.createElement('div');
+        div.className = 'media-item';
+        div.innerHTML = `
+          <span title="${file.name}">${file.name}</span>
+          <button onclick="insertMedia('${file.name}','${file.type}')">Insert</button>
+          <button class="remove-btn" onclick="removeMedia(${idx})">Remove</button>
+        `;
+        mediaListContainer.appendChild(div);
+      });
+    }
+
+    // Insert media file's NAME in code (not URL)
+    window.insertMedia = function(name, type) {
+      let tag = '';
+      if (type.startsWith('image/')) {
+        tag = `<img src="${name}" alt="">`;
+      } else if (type.startsWith('audio/')) {
+        tag = `<audio src="${name}" controls></audio>`;
+      } else if (type.startsWith('video/')) {
+        tag = `<video src="${name}" controls width="320"></video>`;
+      } else {
+        tag = name;
+      }
+      const textarea = editors.html;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      textarea.value = textarea.value.slice(0, start) + tag + textarea.value.slice(end);
+      textarea.focus();
+      textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+      saveAll();
+      runCode();
+    };
+
+    window.removeMedia = function(idx) {
+      mediaFiles.splice(idx, 1);
+      saveAll();
+      refreshMediaList();
+      runCode();
+    };
+
+    mediaUploader.addEventListener('change', function(e) {
+      const files = Array.from(e.target.files);
+      let loaded = 0;
+      if (!files.length) return;
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+          mediaFiles.push({
+            name: file.name,
+            type: file.type,
+            data: ev.target.result
+          });
+          loaded++;
+          if (loaded === files.length) {
+            saveAll();
+            refreshMediaList();
+            runCode();
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+      e.target.value = '';
+    });
+
+    toggleMediaListBtn.addEventListener('click', () => {
+      if (mediaListContainer.style.display === 'none' || !mediaListContainer.style.display) {
+        mediaListContainer.style.display = 'block';
+        toggleMediaListBtn.textContent = 'v';
+      } else {
+        mediaListContainer.style.display = 'none';
+        toggleMediaListBtn.textContent = '^';
+      }
+    });
+    mediaListContainer.style.display = 'none';
+
+    function getMediaMap() {
+      const map = {};
+      mediaFiles.forEach(f => map[f.name] = f.data);
+      return map;
+    }
+
+    function fillIframeMedia(iframe) {
+      const mediaMap = getMediaMap();
+      setTimeout(() => {
+        if (!iframe.contentDocument) return;
+        ['img', 'audio', 'video'].forEach(tag => {
+          iframe.contentDocument.querySelectorAll(tag).forEach(el => {
+            const srcAttr = el.getAttribute('src');
+            if (srcAttr && mediaMap[srcAttr]) {
+              el.src = mediaMap[srcAttr];
+            }
+          });
         });
+      }, 150);
+    }
 
-        loginForm.addEventListener('submit', async function(event) { // Made function async
-            event.preventDefault(); 
-            const emailInput = loginForm.querySelector('input[type="email"]');
-            const passwordInput = loginForm.querySelector('input[type="password"]');
+    function runCode(target = "preview") {
+      const html = editors.html.value;
+      const css = `<style>${editors.css.value}</style>`;
+      const js = `<script>${editors.js.value}<\/script>`;
+      const output = html + css + js;
+      const container = document.getElementById(target);
+      container.innerHTML = '';
+      const iframe = document.createElement('iframe');
+      container.appendChild(iframe);
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open();
+      doc.write(output);
+      doc.close();
+      fillIframeMedia(iframe);
+    }
 
-            const userEmail = emailInput.value.trim();
-            const userPassword = passwordInput.value.trim();
+    // Initial load
+    loadAll();
+    refreshMediaList();
+    runCode();
 
-            if (!userEmail || !userPassword) {
-                alert('Please fill in all login fields.');
-                return;
-            }
+    document.getElementById('runBtn').addEventListener('click', () => runCode());
 
-            // Ensure supabase client is available
-            if (!supabase) {
-                alert('Supabase client is not initialized. Please check console.');
-                return; 
-            }
-            
-            loginButton.disabled = true;
-            loginButton.textContent = 'Logging in...';
+    // --- Fullscreen Preview Logic ---
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const fullscreenOverlay = document.getElementById('fullscreenOverlay');
+    const fullscreenPreview = document.getElementById('fullscreenPreview');
+    const fullscreenBackBtn = document.getElementById('fullscreenBackBtn');
 
-            try {
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email: userEmail,
-                    password: userPassword,
-                });
+    fullscreenBtn.addEventListener('click', () => {
+      fullscreenOverlay.style.display = 'flex';
+      runCode('fullscreenPreview');
+    });
+    fullscreenBackBtn.addEventListener('click', () => {
+      fullscreenOverlay.style.display = 'none';
+      fullscreenPreview.innerHTML = '';
+    });
 
-                if (error) {
-                    console.error('Supabase login error:', error.message);
-                    alert(`Login failed: ${error.message}`);
-                } else if (data && data.user && data.session) {
-                    console.log('Supabase login successful:', data);
-                    localStorage.setItem('smritiYatraUserId', data.user.id);
-                    
-                    authScreen.style.display = 'none';
-                    timelineScreen.style.display = 'block'; 
-                    navbar.style.display = 'flex'; // Show navbar, assuming flex for centering items
-                    appFooter.style.display = 'block'; // Show footer
-                    logoutIcon.style.display = 'inline'; // Show logout icon
-                    
-                    loginForm.reset(); 
-                } else {
-                    console.error('Supabase login issue: No user or session data returned.');
-                    alert('Login failed: Unexpected issue. Please try again.');
-                }
-            } catch (err) {
-                console.error('Unexpected error during login:', err);
-                alert('An unexpected error occurred during login. Please try again.');
-            } finally {
-                loginButton.disabled = false;
-                loginButton.textContent = 'Login';
-            }
-        });
+    // --- APK/ZIP Convert Popup Logic ---
+    const convertBtn = document.getElementById('convertBtn');
+    const convertPopup = document.getElementById('convertPopup');
+    const closePopupBtn = document.getElementById('closePopupBtn');
+    const toApkBtn = document.getElementById('toApkBtn');
+    const toZipBtn = document.getElementById('toZipBtn');
+    const appNameInput = document.getElementById('appNameInput');
+    const appPackageInput = document.getElementById('appPackageInput');
+    const appIconInput = document.getElementById('appIconInput');
+    const convertStatus = document.getElementById('convertStatus');
+    const convertProgress = document.getElementById('convertProgress');
+    const downloadBtns = document.getElementById('downloadBtns');
+    const downloadLink = document.getElementById('downloadLink');
 
-        signupForm.addEventListener('submit', async function(event) { 
-            event.preventDefault(); 
-            
-            const nameInput = signupForm.querySelector('input[type="text"]');
-            const emailInput = signupForm.querySelector('input[type="email"]');
-            const passwordInput = signupForm.querySelector('input[type="password"]');
+    convertBtn.addEventListener('click', () => {
+      convertPopup.style.display = 'flex';
+      appNameInput.value = '';
+      appPackageInput.value = '';
+      appIconInput.value = '';
+      convertStatus.textContent = '';
+      convertProgress.style.width = '0%';
+      downloadBtns.style.display = 'none';
+      downloadLink.href = '#';
+    });
+    closePopupBtn.addEventListener('click', () => {
+      convertPopup.style.display = 'none';
+    });
 
-            const userName = nameInput.value.trim();
-            const userEmail = emailInput.value.trim();
-            const userPassword = passwordInput.value.trim();
+    function fakeConvert(type) {
+      // Simulate real API call (replace with your backend for real use)
+      const appName = appNameInput.value.trim();
+      const appPackage = appPackageInput.value.trim();
+      const appIconFile = appIconInput.files[0];
+      if (!appName || !appPackage) {
+        convertStatus.textContent = 'Please enter App Name and Package Name.';
+        return;
+      }
+      if (!appIconFile) {
+        convertStatus.textContent = 'Please select an App Icon.';
+        return;
+      }
+      convertStatus.textContent = `Converting to ${type.toUpperCase()}...`;
+      convertProgress.style.width = '30%';
+      setTimeout(() => {
+        convertProgress.style.width = '100%';
+        convertStatus.textContent = `${type.toUpperCase()} Generated! (Demo link)`;
+        downloadLink.textContent = `Download ${type.toUpperCase()}`;
+        downloadLink.href = type === 'apk'
+          ? 'https://github.com/some-repo/sample.apk?raw=true'
+          : 'https://github.com/some-repo/sample.zip?raw=true';
+        downloadBtns.style.display = 'block';
+      }, 1800);
+    }
 
-            if (!userName || !userEmail || !userPassword) {
-                alert('Please fill in all signup fields.');
-                return;
-            }
-
-            // Ensure supabase client is available
-            if (!supabase) {
-                alert('Supabase client is not initialized. Please check console.');
-                return; 
-            }
-            
-            // Disable button to prevent multiple submissions
-            signupButton.disabled = true; 
-            signupButton.textContent = 'Signing up...';
-
-            try {
-                const { data, error } = await supabase.auth.signUp({
-                    email: userEmail,
-                    password: userPassword,
-                    options: {
-                        data: { 
-                            full_name: userName 
-                        }
-                    }
-                });
-
-                if (error) {
-                    console.error('Supabase signup error:', error.message);
-                    alert(`Signup failed: ${error.message}`);
-                } else {
-                    console.log('Supabase signup successful:', data);
-                    alert('Signup successful! Please check your email for verification and then login.'); 
-                    signupFormContainer.style.display = 'none';
-                    loginFormContainer.style.display = 'block';
-                    signupForm.reset(); 
-                }
-            } catch (err) {
-                console.error('Unexpected error during signup:', err);
-                alert('An unexpected error occurred during signup. Please try again.');
-            } finally {
-                signupButton.disabled = false;
-                signupButton.textContent = 'Sign Up';
-            }
-        });
-
-        logoutIcon.addEventListener('click', async function(event) {
-            event.preventDefault();
-
-            if (!supabase) {
-                alert('Supabase client is not initialized. Please check console.');
-                return;
-            }
-
-            // Optional: Add a confirmation dialog (currently commented out as per instruction)
-            // if (!confirm('Are you sure you want to logout?')) {
-            //     return;
-            // }
-
-            try {
-                const { error } = await supabase.auth.signOut();
-
-                if (error) {
-                    console.error('Supabase logout error:', error.message);
-                    alert(`Logout failed: ${error.message}`);
-                } else {
-                    console.log('Supabase logout successful.');
-                    localStorage.removeItem('smritiYatraUserId');
-                    
-                    timelineScreen.style.display = 'none';
-                    navbar.style.display = 'none';
-                    appFooter.style.display = 'none';
-                    logoutIcon.style.display = 'none';
-                    
-                    authScreen.style.display = 'flex'; 
-                    loginFormContainer.style.display = 'block'; 
-                    signupFormContainer.style.display = 'none'; 
-                }
-            } catch (err) {
-                console.error('Unexpected error during logout:', err);
-                alert('An unexpected error occurred during logout. Please try again.');
-            }
-        });
-    </script>
+    toApkBtn.addEventListener('click', () => fakeConvert('apk'));
+    toZipBtn.addEventListener('click', () => fakeConvert('zip'));
+  </script>
 </body>
 </html>
