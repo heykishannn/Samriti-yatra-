@@ -154,7 +154,6 @@
   <div class="buttons">
     <button class="run" id="runBtn">▶ Run</button>
   </div>
-  <!-- Android phone shaped preview -->
   <div class="android-frame" id="androidFrame">
     <div class="android-notch"></div>
     <div class="android-speaker"></div>
@@ -164,7 +163,6 @@
   <button class="fullscreen-btn" id="fullscreenBtn">Full Screen Preview</button>
   <button class="convert-btn-main" id="convertBtn">Convert APK/ZIP</button>
 
-  <!-- Fullscreen overlay -->
   <div id="fullscreenOverlay">
     <div id="fullscreenContent">
       <div class="android-frame fullscreen">
@@ -177,7 +175,6 @@
     </div>
   </div>
 
-  <!-- Popup for APK/ZIP conversion -->
   <div class="popup-overlay" id="convertPopup" style="display:none;">
     <div class="popup-content">
       <h2 style="text-align:center;color:#00f2ff;margin-top:0;">Convert to APK or ZIP</h2>
@@ -202,6 +199,9 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
   <script>
     // Tabs & Editors
     const tabs = [
@@ -220,27 +220,49 @@
       });
     });
 
-    // LocalStorage: Save/Load code
+    // LocalStorage: Save/Load code - **Throttling added here for performance**
     const editors = {
       html: document.getElementById('htmlEditor'),
       css: document.getElementById('cssEditor'),
       js: document.getElementById('jsEditor')
     };
+
+    let saveTimeout;
     function saveAll() {
-      localStorage.setItem('htmlCode', editors.html.value);
-      localStorage.setItem('cssCode', editors.css.value);
-      localStorage.setItem('jsCode', editors.js.value);
-      localStorage.setItem('mediaFiles', JSON.stringify(mediaFiles));
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        localStorage.setItem('htmlCode', editors.html.value);
+        localStorage.setItem('cssCode', editors.css.value);
+        localStorage.setItem('jsCode', editors.js.value);
+        localStorage.setItem('mediaFiles', JSON.stringify(mediaFiles));
+        // console.log("Code and media saved."); // For debugging
+      }, 500); // Save after 500ms of no input
     }
+
     function loadAll() {
       editors.html.value = localStorage.getItem('htmlCode') || '';
       editors.css.value = localStorage.getItem('cssCode') || '';
       editors.js.value = localStorage.getItem('jsCode') || '';
-      mediaFiles = JSON.parse(localStorage.getItem('mediaFiles') || '[]') || [];
+      try {
+          mediaFiles = JSON.parse(localStorage.getItem('mediaFiles') || '[]');
+          // Ensure dataURLs are correctly formatted if they were stringified strangely
+          mediaFiles = mediaFiles.map(file => {
+              if (file.data && typeof file.data === 'object' && file.data.data) {
+                  // This handles cases where data might be stored as {data: "data:..."}
+                  return { name: file.name, type: file.type, data: file.data.data };
+              }
+              return file;
+          });
+      } catch (e) {
+          console.error("Failed to parse mediaFiles from localStorage:", e);
+          mediaFiles = [];
+      }
     }
-    editors.html.addEventListener('input', () => { saveAll(); });
-    editors.css.addEventListener('input', () => { saveAll(); });
-    editors.js.addEventListener('input', () => { saveAll(); });
+
+    editors.html.addEventListener('input', () => { saveAll(); runCodeThrottled(); });
+    editors.css.addEventListener('input', () => { saveAll(); runCodeThrottled(); });
+    editors.js.addEventListener('input', () => { saveAll(); runCodeThrottled(); });
+
 
     // Media System
     const mediaUploader = document.getElementById('mediaUploader');
@@ -284,39 +306,61 @@
       textarea.focus();
       textarea.selectionStart = textarea.selectionEnd = start + tag.length;
       saveAll();
-      runCode();
+      runCodeThrottled(); // Use throttled runCode here too
     };
 
     window.removeMedia = function(idx) {
       mediaFiles.splice(idx, 1);
       saveAll();
       refreshMediaList();
-      runCode();
+      runCodeThrottled(); // Use throttled runCode here too
     };
 
     mediaUploader.addEventListener('change', function(e) {
-      const files = Array.from(e.target.files);
-      let loaded = 0;
-      if (!files.length) return;
-      files.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-          mediaFiles.push({
-            name: file.name,
-            type: file.type,
-            data: ev.target.result
-          });
-          loaded++;
-          if (loaded === files.length) {
-            saveAll();
-            refreshMediaList();
-            runCode();
-          }
-        };
-        reader.readAsDataURL(file);
-      });
-      e.target.value = '';
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
+
+        let loadedCount = 0;
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                // Check for duplicate file names and rename if necessary
+                let fileName = file.name;
+                let counter = 1;
+                while (mediaFiles.some(existingFile => existingFile.name === fileName)) {
+                    const parts = file.name.split('.');
+                    const name = parts.slice(0, -1).join('.');
+                    const ext = parts[parts.length - 1];
+                    fileName = `${name}(${counter}).${ext}`;
+                    counter++;
+                }
+
+                mediaFiles.push({
+                    name: fileName,
+                    type: file.type,
+                    data: ev.target.result // Base64 Data URL
+                });
+                loadedCount++;
+                if (loadedCount === files.length) {
+                    saveAll();
+                    refreshMediaList();
+                    runCodeThrottled(); // Use throttled runCode
+                }
+            };
+            reader.onerror = function() {
+                console.error("Error reading file:", file.name);
+                loadedCount++; // Still increment to avoid blocking if one file fails
+                if (loadedCount === files.length) {
+                    saveAll();
+                    refreshMediaList();
+                    runCodeThrottled();
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+        e.target.value = ''; // Clear the input so same file can be selected again
     });
+
 
     toggleMediaListBtn.addEventListener('click', () => {
       if (mediaListContainer.style.display === 'none' || !mediaListContainer.style.display) {
@@ -337,113 +381,66 @@
 
     function fillIframeMedia(iframe) {
       const mediaMap = getMediaMap();
+      // Use setTimeout with 0 to allow iframe content to render first
+      // Or even better, listen for iframe load events if possible, but 0-timeout is a common workaround
       setTimeout(() => {
-        if (!iframe.contentDocument) return;
+        if (!iframe.contentDocument) {
+            console.warn("Iframe contentDocument not available yet for media fill.");
+            return;
+        }
         ['img', 'audio', 'video'].forEach(tag => {
           iframe.contentDocument.querySelectorAll(tag).forEach(el => {
             const srcAttr = el.getAttribute('src');
-            if (srcAttr && mediaMap[srcAttr]) {
+            // Only modify if src is a filename, not already a data URL or external URL
+            if (srcAttr && mediaMap[srcAttr] && !srcAttr.startsWith('data:') && !srcAttr.startsWith('http')) {
               el.src = mediaMap[srcAttr];
             }
           });
         });
-      }, 150);
+      }, 50); // A small delay to ensure iframe content is parsed
     }
 
+    let runCodeTimeout;
     function runCode(target = "preview") {
       const html = editors.html.value;
       const css = `<style>${editors.css.value}</style>`;
       const js = `<script>${editors.js.value}<\/script>`;
       const output = html + css + js;
       const container = document.getElementById(target);
-      container.innerHTML = '';
+      container.innerHTML = ''; // Clear previous content
       const iframe = document.createElement('iframe');
       container.appendChild(iframe);
-      const doc = iframe.contentDocument || iframe.contentWindow.document;
-      doc.open();
-      doc.write(output);
-      doc.close();
-      fillIframeMedia(iframe);
+
+      // Using srcdoc is generally safer and more performant for simple content
+      // and automatically handles cross-origin issues for dynamic content.
+      // However, it might have length limitations on older browsers.
+      // For very large content, direct document.write is also an option.
+      iframe.srcdoc = output;
+
+      iframe.onload = () => {
+        fillIframeMedia(iframe);
+      };
+      // Fallback for older browsers or if srcdoc is too long/fails
+      if (!iframe.srcdoc) {
+          const doc = iframe.contentDocument || iframe.contentWindow.document;
+          doc.open();
+          doc.write(output);
+          doc.close();
+          fillIframeMedia(iframe);
+      }
+    }
+
+    // Throttled version of runCode
+    function runCodeThrottled() {
+      clearTimeout(runCodeTimeout);
+      runCodeTimeout = setTimeout(() => {
+        runCode();
+      }, 750); // Run code after 750ms of no input
     }
 
     // Initial load
     loadAll();
     refreshMediaList();
-    runCode();
+    runCode(); // Initial run on page load
 
-    document.getElementById('runBtn').addEventListener('click', () => runCode());
-
-    // --- Fullscreen Preview Logic ---
-    const fullscreenBtn = document.getElementById('fullscreenBtn');
-    const fullscreenOverlay = document.getElementById('fullscreenOverlay');
-    const fullscreenPreview = document.getElementById('fullscreenPreview');
-    const fullscreenBackBtn = document.getElementById('fullscreenBackBtn');
-
-    fullscreenBtn.addEventListener('click', () => {
-      fullscreenOverlay.style.display = 'flex';
-      runCode('fullscreenPreview');
-    });
-    fullscreenBackBtn.addEventListener('click', () => {
-      fullscreenOverlay.style.display = 'none';
-      fullscreenPreview.innerHTML = '';
-    });
-
-    // --- APK/ZIP Convert Popup Logic ---
-    const convertBtn = document.getElementById('convertBtn');
-    const convertPopup = document.getElementById('convertPopup');
-    const closePopupBtn = document.getElementById('closePopupBtn');
-    const toApkBtn = document.getElementById('toApkBtn');
-    const toZipBtn = document.getElementById('toZipBtn');
-    const appNameInput = document.getElementById('appNameInput');
-    const appPackageInput = document.getElementById('appPackageInput');
-    const appIconInput = document.getElementById('appIconInput');
-    const convertStatus = document.getElementById('convertStatus');
-    const convertProgress = document.getElementById('convertProgress');
-    const downloadBtns = document.getElementById('downloadBtns');
-    const downloadLink = document.getElementById('downloadLink');
-
-    convertBtn.addEventListener('click', () => {
-      convertPopup.style.display = 'flex';
-      appNameInput.value = '';
-      appPackageInput.value = '';
-      appIconInput.value = '';
-      convertStatus.textContent = '';
-      convertProgress.style.width = '0%';
-      downloadBtns.style.display = 'none';
-      downloadLink.href = '#';
-    });
-    closePopupBtn.addEventListener('click', () => {
-      convertPopup.style.display = 'none';
-    });
-
-    function fakeConvert(type) {
-      // Simulate real API call (replace with your backend for real use)
-      const appName = appNameInput.value.trim();
-      const appPackage = appPackageInput.value.trim();
-      const appIconFile = appIconInput.files[0];
-      if (!appName || !appPackage) {
-        convertStatus.textContent = 'Please enter App Name and Package Name.';
-        return;
-      }
-      if (!appIconFile) {
-        convertStatus.textContent = 'Please select an App Icon.';
-        return;
-      }
-      convertStatus.textContent = `Converting to ${type.toUpperCase()}...`;
-      convertProgress.style.width = '30%';
-      setTimeout(() => {
-        convertProgress.style.width = '100%';
-        convertStatus.textContent = `${type.toUpperCase()} Generated! (Demo link)`;
-        downloadLink.textContent = `Download ${type.toUpperCase()}`;
-        downloadLink.href = type === 'apk'
-          ? 'https://github.com/some-repo/sample.apk?raw=true'
-          : 'https://github.com/some-repo/sample.zip?raw=true';
-        downloadBtns.style.display = 'block';
-      }, 1800);
-    }
-
-    toApkBtn.addEventListener('click', () => fakeConvert('apk'));
-    toZipBtn.addEventListener('click', () => fakeConvert('zip'));
-  </script>
-</body>
-</html>
+ 
